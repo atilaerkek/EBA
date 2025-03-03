@@ -42,4 +42,68 @@
         fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pubhtml')
             .then(response => response.text())
             .then(html => {
-                const parser
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const table = doc.querySelector('table');
+                
+                const newTable = document.createElement('table');
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+                
+                const rows = Array.from(table.rows);
+                
+                // İlk 4 satırı thead'e ekleyerek sabit yapma
+                for (let i = 0; i < 4; i++) {
+                    const row = rows[i].cloneNode(true);
+                    row.classList.add('fixed-header');
+                    thead.appendChild(row);
+                }
+
+                // 4. satırdaki (index 3) hücrelere sıralama butonları ekleme (C4'ten T4'e)
+                const headerRow = thead.rows[3];
+                for (let i = 2; i <= 19; i++) { // C4 (2) to T4 (19)
+                    const cell = headerRow.cells[i];
+                    const button = document.createElement('button');
+                    button.textContent = 'Sırala';
+                    button.className = 'sort-button';
+                    button.onclick = () => sortTable(i);
+                    cell.appendChild(button);
+                }
+
+                // Geri kalan satırları tbody'ye ekleme
+                rows.slice(4).forEach(row => {
+                    tbody.appendChild(row.cloneNode(true));
+                });
+                
+                newTable.appendChild(thead);
+                newTable.appendChild(tbody);
+                document.getElementById('tableContainer').appendChild(newTable);
+            });
+
+        function sortTable(columnIndex) {
+            const table = document.querySelector('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.rows);
+            
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent.trim();
+                const bValue = b.cells[columnIndex].textContent.trim();
+                
+                const aNum = parseFloat(aValue);
+                const bNum = parseFloat(bValue);
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return bNum - aNum; // Büyükten küçüğe
+                }
+                return bValue.localeCompare(aValue);
+            });
+
+            // tbody'yi temizleyip sıralanmış satırları ekleme
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>
