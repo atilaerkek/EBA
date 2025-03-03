@@ -3,202 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets Verileri - Filtreleme ve Sıralama</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .dropdowns {
-            margin-bottom: 20px;
-        }
-        select {
-            padding: 8px;
-            margin-right: 10px;
-            font-size: 16px;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #333;
-            padding: 10px;
-            text-align: center;
-        }
-        th {
-            background-color: #4CAF50; /* Yeşil (genel başlık için) */
-            color: white;
-            font-weight: bold;
-            white-space: nowrap;
-        }
-        td {
-            word-wrap: break-word;
-        }
-        /* Standart sütun genişliği */
-        th:not(.dynamic-width), td:not(.dynamic-width) {
-            width: 120px; /* Standart genişlik */
-        }
-        /* Dinamik genişlik (İl/İlçe/Okul için) */
-        th.dynamic-width, td.dynamic-width {
-            width: 360px; /* Diğer sütunların 3 katı */
-            min-width: 360px;
-            max-width: 360px;
-            white-space: normal;
-        }
-        tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        #errorMessage {
-            color: red;
-            margin-top: 10px;
-            display: none;
-        }
-    </style>
+    <title>Filtrelenebilir ve Sıralanabilir Tablo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
+            const filterColumns = [
+                "Kayıtlı Öğretmen Sayısı", 
+                "Son 1 Güne Ait Aktif Öğretmen Sayısı", 
+                "Son 1 Güne Ait Aktif Kullanım Oranı", 
+                "Son 7 Güne Ait Aktif Öğretmen Sayısı", 
+                "Son 7 Güne Ait Aktif Kullanım Oranı", 
+                "Son 30 Güne Ait Aktif Öğretmen Sayısı", 
+                "Son 30 Güne Ait Aktif Kullanım Oranı", 
+                "Son 90 Güne Ait Aktif Öğretmen Sayısı", 
+                "Son 90 Güne Ait Aktif Kullanım Oranı"
+            ];
+            
+            fetch(sheetUrl)
+                .then(response => response.text())
+                .then(csvText => {
+                    const data = Papa.parse(csvText, { header: true }).data;
+                    if (data.length === 0) return;
+                    
+                    const table1 = document.getElementById("data-table1");
+                    const table2 = document.getElementById("data-table2");
+                    const thead1 = table1.createTHead();
+                    const tbody1 = table1.createTBody();
+                    const thead2 = table2.createTHead();
+                    const tbody2 = table2.createTBody();
+                    
+                    const select = document.getElementById("column-select");
+                    filterColumns.forEach(col => {
+                        let option = document.createElement("option");
+                        option.value = col;
+                        option.textContent = col;
+                        select.appendChild(option);
+                    });
+                    
+                    function populateTable(sortedData, tableBody) {
+                        tableBody.innerHTML = "";
+                        sortedData.forEach(row => {
+                            let tr = tableBody.insertRow();
+                            filterColumns.forEach(col => {
+                                let td = tr.insertCell();
+                                td.textContent = row[col] || "";
+                            });
+                        });
+                    }
+                    
+                    function sortAndDisplayTables(sortBy) {
+                        let sortedData = [...data].sort((a, b) => {
+                            let valA = parseFloat(a[sortBy]) || 0;
+                            let valB = parseFloat(b[sortBy]) || 0;
+                            return valB - valA;
+                        });
+                        populateTable(sortedData, tbody1);
+                        populateTable(sortedData, tbody2);
+                    }
+                    
+                    // İlk yüklemede varsayılan sıralama
+                    sortAndDisplayTables("Kayıtlı Öğretmen Sayısı");
+                    select.value = "Kayıtlı Öğretmen Sayısı";
+                    
+                    // Seçim değiştiğinde sıralama
+                    select.addEventListener("change", function () {
+                        sortAndDisplayTables(this.value);
+                    });
+                });
+        });
+    </script>
 </head>
 <body>
-    <div class="container">
-        <div class="dropdowns">
-            <select id="fieldSelect">
-                <option value="">Sütun Seçin</option>
-            </select>
-        </div>
-        <table id="dataTable">
-            <thead>
-                <tr id="headerRow"></tr>
-            </thead>
-            <tbody id="dataBody"></tbody>
-        </table>
-        <div id="errorMessage"></div>
-    </div>
-
-    <script>
-        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
-        let data = [];
-        let headers = [];
-
-        // Verileri çekme
-        function loadData() {
-            Papa.parse(csvUrl, {
-                download: true,
-                header: false,
-                complete: function(results) {
-                    data = results.data.filter(row => row.some(cell => cell.trim() !== ""));
-                    if (data.length <= 1) {
-                        document.getElementById("errorMessage").textContent = "Veri çekilemedi veya tablo boş.";
-                        document.getElementById("errorMessage").style.display = "block";
-                        return;
-                    }
-                    initializePage(); // Sayfayı otomatik başlat
-                },
-                error: function(error) {
-                    console.error("CSV çekme hatası:", error);
-                    document.getElementById("errorMessage").textContent = "Veri çekilirken bir hata oluştu: " + error.message;
-                    document.getElementById("errorMessage").style.display = "block";
-                }
-            });
-        }
-
-        // Sayfayı otomatik başlat (Öğretmen - Kayıtlı Öğretmen Sayısı ile)
-        function initializePage() {
-            headers = data[0]; // Başlıkları al
-            let fieldSelect = document.getElementById("fieldSelect");
-
-            // Başlıkları açılır listeye ekle (ilk sütun hariç, İl/İlçe/Okul)
-            headers.slice(2).forEach(header => { // 2. indexten sonrası (Öğretmen verileri)
-                let option = document.createElement("option");
-                option.value = header;
-                option.textContent = header;
-                fieldSelect.appendChild(option);
-            });
-
-            // Varsayılan olarak "Kayıtlı Öğretmen Sayısı" seçili ve tabloyu büyükten küçüğe sırala
-            fieldSelect.value = "Kayıtlı Öğretmen Sayısı";
-            updateTable("Kayıtlı Öğretmen Sayısı");
-
-            // Sütun seçimi değiştiğinde tabloyu güncelle
-            fieldSelect.addEventListener("change", (e) => {
-                updateTable(e.target.value);
-            });
-        }
-
-        // Tabloyu güncelle ve otomatik sırala
-        function updateTable(selectedField) {
-            if (!selectedField) {
-                document.getElementById("dataTable").style.display = "none";
-                return;
-            }
-            document.getElementById("dataTable").style.display = "table";
-
-            let headerRow = document.getElementById("headerRow");
-            headerRow.innerHTML = "";
-            let headersToShow = ["İl/İlçe/Okul", selectedField]; // Yalnızca İl/İlçe/Okul ve seçilen alan gösteriliyor
-            headersToShow.forEach((header, index) => {
-                let th = document.createElement("th");
-                th.textContent = header;
-                if (index === 0) th.classList.add("dynamic-width"); // İlk sütun geniş
-                headerRow.appendChild(th);
-            });
-
-            let rows = data.slice(1).filter(row => row[1] && row[1].trim() !== ""); // Boş satırları filtrele, ikinci sütun (İl/İlçe/Okul) kontrolü
-            let columnIndex = headers.indexOf(selectedField);
-
-            // Seçilen alana göre otomatik sıralama (büyükten küçüğe)
-            if (columnIndex > 0) {
-                sortTable(rows, columnIndex);
-            } else {
-                populateTable(rows);
-            }
-        }
-
-        // Tabloyu verilerle doldur
-        function populateTable(rows) {
-            let tbody = document.getElementById("dataBody");
-            tbody.innerHTML = "";
-            if (rows.length === 0) {
-                tbody.innerHTML = "<tr><td colspan='2'>Veri bulunamadı.</td></tr>";
-                return;
-            }
-            rows.forEach(row => {
-                let tr = document.createElement("tr");
-                row.forEach((cell, index) => {
-                    if (index === 0 || headers.includes(row[0])) { // Yalnızca İl/İlçe/Okul ve seçilen alan gösteriliyor
-                        let td = document.createElement("td");
-                        td.textContent = cell.trim();
-                        if (index === 0) td.classList.add("dynamic-width"); // İlk sütun geniş
-                        tr.appendChild(td);
-                    }
-                });
-                tbody.appendChild(tr);
-            });
-        }
-
-        // Sütuna göre sıralama fonksiyonu (otomatik, sadece büyükten küçüğe)
-        function sortTable(rows, columnIndex) {
-            rows.sort((a, b) => {
-                let valA = a[columnIndex].trim();
-                let valB = b[columnIndex].trim();
-                let numA = parseFloat(valA.replace('%', '')); // Yüzde işaretini çıkar
-                let numB = parseFloat(valB.replace('%', ''));
-
-                if (!isNaN(numA) && !isNaN(numB)) {
-                    return numB - numA; // Sayısal sıralama (büyükten küçüğe)
-                } else {
-                    return valB.localeCompare(valA); // Metin sıralama (büyükten küçüğe)
-                }
-            });
-
-            populateTable(rows);
-        }
-
-        // Sayfayı yüklerken verileri göster
-        window.onload = loadData;
-    </script>
+    <h2>Filtrelenebilir ve Sıralanabilir Tablo</h2>
+    <label for="column-select">Sıralama Kriteri:</label>
+    <select id="column-select">
+    </select>
+    
+    <h3>Tablo 1</h3>
+    <table id="data-table1" border="1"></table>
+    
+    <h3>Tablo 2</h3>
+    <table id="data-table2" border="1"></table>
 </body>
 </html>
