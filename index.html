@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Verilerini Sıralama</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 80%;
+            margin: 20px auto;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+            cursor: pointer;
+        }
+        th:hover {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Sheets Verileri</h1>
+    <table id="dataTable">
+        <thead>
+            <tr id="headerRow"></tr>
+        </thead>
+        <tbody id="dataBody"></tbody>
+    </table>
+
+    <script>
+        // Google Sheets CSV bağlantısı
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
+
+        let data = [];
+
+        // CSV verisini çekme ve tabloya yükleme
+        function loadData() {
+            fetch(csvUrl)
+                .then(response => response.text())
+                .then(csvText => {
+                    // CSV'yi diziye çevir
+                    data = csvText.split('\n').map(row => row.split(','));
+
+                    let headers = data[0];
+                    let rows = data.slice(1);
+
+                    // Başlıkları ekle
+                    let headerRow = document.getElementById("headerRow");
+                    headers.forEach((header, index) => {
+                        let th = document.createElement("th");
+                        th.textContent = header;
+                        th.addEventListener("click", () => sortTable(index));
+                        headerRow.appendChild(th);
+                    });
+
+                    // Verileri ekle
+                    populateTable(rows);
+                })
+                .catch(error => console.error("Veri çekme hatası:", error));
+        }
+
+        // Tabloyu verilerle doldur
+        function populateTable(rows) {
+            let tbody = document.getElementById("dataBody");
+            tbody.innerHTML = ""; // Önceki içeriği temizle
+            rows.forEach(row => {
+                let tr = document.createElement("tr");
+                row.forEach(cell => {
+                    let td = document.createElement("td");
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Sütuna göre sıralama fonksiyonu
+        function sortTable(columnIndex) {
+            let rows = data.slice(1); // Başlık hariç veriler
+            rows.sort((a, b) => {
+                let valA = parseFloat(a[columnIndex]) || a[columnIndex];
+                let valB = parseFloat(b[columnIndex]) || b[columnIndex];
+                // Büyükten küçüğe sıralama
+                if (typeof valA === "number" && typeof valB === "number") {
+                    return valB - valA;
+                } else {
+                    return valB.localeCompare(valA); // Metin sıralama
+                }
+            });
+            populateTable(rows);
+        }
+
+        // Sayfayı yüklerken verileri göster
+        window.onload = loadData;
+    </script>
+</body>
+</html>
