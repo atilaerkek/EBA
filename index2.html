@@ -3,87 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Filtrelenebilir ve Sıralanabilir Tablo</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
-            const filterColumns = [
-                "Kayıtlı Öğretmen Sayısı", 
-                "Son 1 Güne Ait Aktif Öğretmen Sayısı", 
-                "Son 1 Güne Ait Aktif Kullanım Oranı", 
-                "Son 7 Güne Ait Aktif Öğretmen Sayısı", 
-                "Son 7 Güne Ait Aktif Kullanım Oranı", 
-                "Son 30 Güne Ait Aktif Öğretmen Sayısı", 
-                "Son 30 Güne Ait Aktif Kullanım Oranı", 
-                "Son 90 Güne Ait Aktif Öğretmen Sayısı", 
-                "Son 90 Güne Ait Aktif Kullanım Oranı"
-            ];
-            
-            fetch(sheetUrl)
-                .then(response => response.text())
-                .then(csvText => {
-                    const data = Papa.parse(csvText, { header: true }).data;
-                    if (data.length === 0) return;
-                    
-                    const table1 = document.getElementById("data-table1");
-                    const table2 = document.getElementById("data-table2");
-                    const thead1 = table1.createTHead();
-                    const tbody1 = table1.createTBody();
-                    const thead2 = table2.createTHead();
-                    const tbody2 = table2.createTBody();
-                    
-                    const select = document.getElementById("column-select");
-                    filterColumns.forEach(col => {
-                        let option = document.createElement("option");
-                        option.value = col;
-                        option.textContent = col;
-                        select.appendChild(option);
-                    });
-                    
-                    function populateTable(sortedData, tableBody) {
-                        tableBody.innerHTML = "";
-                        sortedData.forEach(row => {
-                            let tr = tableBody.insertRow();
-                            filterColumns.forEach(col => {
-                                let td = tr.insertCell();
-                                td.textContent = row[col] || "";
-                            });
-                        });
-                    }
-                    
-                    function sortAndDisplayTables(sortBy) {
-                        let sortedData = [...data].sort((a, b) => {
-                            let valA = parseFloat(a[sortBy]) || 0;
-                            let valB = parseFloat(b[sortBy]) || 0;
-                            return valB - valA;
-                        });
-                        populateTable(sortedData, tbody1);
-                        populateTable(sortedData, tbody2);
-                    }
-                    
-                    // İlk yüklemede varsayılan sıralama
-                    sortAndDisplayTables("Kayıtlı Öğretmen Sayısı");
-                    select.value = "Kayıtlı Öğretmen Sayısı";
-                    
-                    // Seçim değiştiğinde sıralama
-                    select.addEventListener("change", function () {
-                        sortAndDisplayTables(this.value);
-                    });
-                });
-        });
-    </script>
+    <title>EBA Ders Kullanım Raporu - MERSİN ANAMUR</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        select {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
-    <h2>Filtrelenebilir ve Sıralanabilir Tablo</h2>
-    <label for="column-select">Sıralama Kriteri:</label>
-    <select id="column-select">
+    <h1>EBA Ders Kullanım Raporu - MERSİN ANAMUR</h1>
+    <label for="sort-by">Sıralama Ölçütü:</label>
+    <select id="sort-by">
+        <option value="registeredTeachers">Kayıtlı Öğretmen Sayısı</option>
+        <option value="activeTeachers1Day">Son 1 Güne Ait Aktif Öğretmen Sayısı</option>
+        <option value="activeTeachers7Days">Son 7 Güne Ait Aktif Öğretmen Sayısı</option>
+        <option value="activeTeachers30Days">Son 30 Güne Ait Aktif Öğretmen Sayısı</option>
+        <option value="activeTeachers90Days">Son 90 Güne Ait Aktif Öğretmen Sayısı</option>
+        <option value="registeredStudents">Kayıtlı Öğrenci Sayısı</option>
+        <option value="activeStudents1Day">Son 1 Güne Ait Aktif Öğrenci Sayısı</option>
+        <option value="activeStudents7Days">Son 7 Güne Ait Aktif Öğrenci Sayısı</option>
+        <option value="activeStudents30Days">Son 30 Güne Ait Aktif Öğrenci Sayısı</option>
+        <option value="activeStudents90Days">Son 90 Güne Ait Aktif Öğrenci Sayısı</option>
     </select>
-    
-    <h3>Tablo 1</h3>
-    <table id="data-table1" border="1"></table>
-    
-    <h3>Tablo 2</h3>
-    <table id="data-table2" border="1"></table>
+    <table id="data-table">
+        <thead>
+            <tr>
+                <th>İl/İlçe/Okul</th>
+                <th>Kayıtlı Öğretmen Sayısı</th>
+                <th>Son 1 Güne Ait Aktif Öğretmen Sayısı</th>
+                <th>Son 7 Güne Ait Aktif Öğretmen Sayısı</th>
+                <th>Son 30 Güne Ait Aktif Öğretmen Sayısı</th>
+                <th>Son 90 Güne Ait Aktif Öğretmen Sayısı</th>
+                <th>Kayıtlı Öğrenci Sayısı</th>
+                <th>Son 1 Güne Ait Aktif Öğrenci Sayısı</th>
+                <th>Son 7 Güne Ait Aktif Öğrenci Sayısı</th>
+                <th>Son 30 Güne Ait Aktif Öğrenci Sayısı</th>
+                <th>Son 90 Güne Ait Aktif Öğrenci Sayısı</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const data = [
+                {
+                    school: "Gazi Mesleki Ve Teknik Anadolu Lisesi",
+                    registeredTeachers: 32,
+                    activeTeachers1Day: 2,
+                    activeTeachers7Days: 9,
+                    activeTeachers30Days: 14,
+                    activeTeachers90Days: 27,
+                    registeredStudents: 220,
+                    activeStudents1Day: 2,
+                    activeStudents7Days: 32,
+                    activeStudents30Days: 55,
+                    activeStudents90Days: 107
+                },
+                {
+                    school: "Anamur Ticaret Mesleki Ve Teknik Anadolu Lisesi",
+                    registeredTeachers: 34,
+                    activeTeachers1Day: 1,
+                    activeTeachers7Days: 9,
+                    activeTeachers30Days: 12,
+                    activeTeachers90Days: 20,
+                    registeredStudents: 160,
+                    activeStudents1Day: 0,
+                    activeStudents7Days: 23,
+                    activeStudents30Days: 37,
+                    activeStudents90Days: 56
+                },
+                // Diğer okullar buraya eklenecek
+            ];
+
+            const tableBody = document.querySelector("#data-table tbody");
+            const sortBy = document.getElementById("sort-by");
+
+            function renderTable(data) {
+                tableBody.innerHTML = "";
+                data.forEach(row => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${row.school}</td>
+                        <td>${row.registeredTeachers}</td>
+                        <td>${row.activeTeachers1Day}</td>
+                        <td>${row.activeTeachers7Days}</td>
+                        <td>${row.activeTeachers30Days}</td>
+                        <td>${row.activeTeachers90Days}</td>
+                        <td>${row.registeredStudents}</td>
+                        <td>${row.activeStudents1Day}</td>
+                        <td>${row.activeStudents7Days}</td>
+                        <td>${row.activeStudents30Days}</td>
+                        <td>${row.activeStudents90Days}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            function sortData(key) {
+                return data.sort((a, b) => b[key] - a[key]);
+            }
+
+            // Sayfa yüklendiğinde Kayıtlı Öğretmen Sayısına göre sırala
+            const initialSortKey = "registeredTeachers";
+            const sortedData = sortData(initialSortKey);
+            renderTable(sortedData);
+
+            // Açılır listeden seçilen ölçüte göre sırala
+            sortBy.addEventListener("change", function() {
+                const sortKey = this.value;
+                const sortedData = sortData(sortKey);
+                renderTable(sortedData);
+            });
+        });
+    </script>
 </body>
 </html>
