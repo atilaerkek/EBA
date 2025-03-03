@@ -87,16 +87,30 @@
 
             // Sıralama butonlarını ekle
             const buttonRow = document.createElement('tr');
-            for (let i = 2; i < 19; i++) { // C4'ten T4'e kadar (3. indeksten 19. indekse)
+            buttonRow.classList.add('fixed-row');
+            for (let i = 0; i < headers[0].length; i++) {
                 const td = document.createElement('td');
-                const button = document.createElement('button');
-                button.textContent = '▼ Sırala';
-                button.className = 'sort-button';
-                button.onclick = () => sortTable(i, data, table);
-                td.appendChild(button);
+                if (i >= 2 && i <= 18) { // C4'ten T4'e kadar
+                    const button = document.createElement('button');
+                    button.textContent = '▼ Sırala';
+                    button.className = 'sort-button';
+                    button.onclick = () => sortTable(i, data, table);
+                    td.appendChild(button);
+                }
                 buttonRow.appendChild(td);
             }
             table.appendChild(buttonRow);
+
+            // Veri satırlarını ekle
+            renderTableData(data, table);
+            container.appendChild(table);
+        }
+
+        function renderTableData(data, table) {
+            // Mevcut veri satırlarını temizle (ilk 6 satır hariç)
+            while (table.rows.length > 6) {
+                table.deleteRow(6);
+            }
 
             // Veri satırlarını ekle
             data.forEach(row => {
@@ -108,18 +122,19 @@
                 });
                 table.appendChild(tr);
             });
-
-            container.appendChild(table);
         }
 
         function sortTable(columnIndex, data, table) {
             // Veriyi sırala
             const sortedData = [...data].sort((a, b) => {
-                // Sayısal değerleri kontrol et
                 const aVal = a[columnIndex];
                 const bVal = b[columnIndex];
                 
-                // Sayısal değerler için parseFloat kullan
+                // Boş değerleri kontrol et
+                if (!aVal) return 1;
+                if (!bVal) return -1;
+
+                // Sayısal değerleri kontrol et
                 const aNum = parseFloat(aVal.replace(/[^0-9.-]+/g, ''));
                 const bNum = parseFloat(bVal.replace(/[^0-9.-]+/g, ''));
                 
@@ -131,24 +146,8 @@
                 return bVal.localeCompare(aVal, 'tr');
             });
 
-            // Tabloyu güncelle (ilk 6 satırı koruyarak - 5 sabit satır + 1 buton satırı)
-            const rows = Array.from(table.querySelectorAll('tr'));
-            
-            // Eski veri satırlarını kaldır
-            while (table.rows.length > 6) {
-                table.deleteRow(6);
-            }
-
-            // Sıralanmış veriyi ekle
-            sortedData.forEach(row => {
-                const tr = document.createElement('tr');
-                row.forEach(cell => {
-                    const td = document.createElement('td');
-                    td.textContent = cell;
-                    tr.appendChild(td);
-                });
-                table.appendChild(tr);
-            });
+            // Sıralanmış veriyi tabloya yeniden render et
+            renderTableData(sortedData, table);
         }
 
         // Sayfa yüklendiğinde tabloyu oluştur
