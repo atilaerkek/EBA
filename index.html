@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <title>Tablo Sıralama</title>
@@ -9,31 +9,20 @@
             width: 100%;
         }
         th, td {
-            border: 1px solid black;
+            border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
         }
-        .fixed-header {
-            position: sticky;
-            top: 0;
-            background-color: #f0f0f0;
-            z-index: 1;
-        }
-        .sort-container {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
         .sort-button {
-            cursor: pointer;
             background-color: #4CAF50;
-            color: white;
-            padding: 5px;
             border: none;
-            border-radius: 3px;
+            color: white;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin: 2px;
         }
-        select {
-            padding: 5px;
+        .fixed-row {
+            background-color: #f2f2f2;
         }
     </style>
 </head>
@@ -41,130 +30,123 @@
     <div id="tableContainer"></div>
 
     <script>
-        // Açılır liste seçenekleri
-        const sortOptions = [
-            "İl/İlçe/Okul",
-            "Kayıtlı Öğretmen Sayısı",
-            "Son 1 Güne Ait Aktif Öğretmen Sayısı",
-            "Son 1 Güne Ait Aktif Kullanım Oranı",
-            "Son 7 Güne Ait Aktif Öğretmen Sayısı",
-            "Son 7 Güne Ait Aktif Kullanım Oranı",
-            "Son 30 Güne Ait Aktif Öğretmen Sayısı",
-            "Son 30 Güne Ait Aktif Kullanım Oranı",
-            "Son 90 Güne Ait Aktif Öğretmen Sayısı",
-            "Son 90 Güne Ait Aktif Kullanım Oranı",
-            "Kayıtlı Öğrenci Sayısı",
-            "Son 1 Güne Ait Aktif Öğrenci Sayısı",
-            "Son 1 Güne Ait Aktif Kullanım Oranı",
-            "Son 7 Güne Ait Aktif Öğrenci Sayısı",
-            "Son 7 Güne Ait Aktif Kullanım Oranı",
-            "Son 30 Güne Ait Aktif Öğrenci Sayısı",
-            "Son 30 Güne Ait Aktif Kullanım Oranı",
-            "Son 90 Güne Ait Aktif Öğrenci Sayısı",
-            "Son 90 Güne Ait Aktif Kullanım Oranı"
-        ];
-
-        // Google Sheets'ten veriyi çekme
-        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pubhtml')
-            .then(response => response.text())
-            .then(html => {
+        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pubhtml';
+        
+        async function fetchTableData() {
+            try {
+                const response = await fetch(SPREADSHEET_URL);
+                const html = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                const table = doc.querySelector('table');
-                
-                const newTable = document.createElement('table');
-                const tbody = document.createElement('tbody');
-                const rows = Array.from(table.rows);
-                
-                // İlk 4 satırı sabit olarak ekleme
-                for (let i = 0; i < 4; i++) {
-                    const row = rows[i].cloneNode(true);
-                    row.classList.add('fixed-header');
-                    tbody.appendChild(row);
-                }
-
-                // 4. satırdaki hücrelere açılır liste ve sırala butonu ekleme (C4 ve T4)
-                const headerRow = tbody.rows[3];
-                [headerRow.cells[2], headerRow.cells[19]].forEach(cell => {
-                    const container = document.createElement('div');
-                    container.className = 'sort-container';
-                    
-                    const select = document.createElement('select');
-                    sortOptions.forEach((option, index) => {
-                        const opt = document.createElement('option');
-                        opt.value = index;
-                        opt.textContent = option;
-                        select.appendChild(opt);
-                    });
-
-                    const button = document.createElement('button');
-                    button.textContent = 'Sırala';
-                    button.className = 'sort-button';
-                    button.onclick = () => sortTable(cell.cellIndex, select.value);
-                    
-                    container.appendChild(select);
-                    container.appendChild(button);
-                    cell.appendChild(container);
-                });
-
-                // Geri kalan satırları ekleme
-                const dataRows = rows.slice(4);
-                dataRows.forEach(row => tbody.appendChild(row.cloneNode(true)));
-                
-                newTable.appendChild(tbody);
-                document.getElementById('tableContainer').appendChild(newTable);
-            });
-
-        function sortTable(columnIndex, sortOptionIndex) {
-            const table = document.querySelector('table');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.rows).slice(4); // İlk 4 satırı hariç tut
-            
-            // Seçilen seçeneğe göre sütun indeksini eşleştirme
-            const columnMapping = {
-                0: 0,  // İl/İlçe/Okul (örneğin A sütunu)
-                1: 2,  // Kayıtlı Öğretmen Sayısı (C sütunu)
-                2: 3,  // Son 1 Güne Ait Aktif Öğretmen Sayısı
-                3: 4,  // Son 1 Güne Ait Aktif Kullanım Oranı
-                4: 5,  // Son 7 Güne Ait Aktif Öğretmen Sayısı
-                5: 6,  // Son 7 Güne Ait Aktif Kullanım Oranı
-                6: 7,  // Son 30 Güne Ait Aktif Öğretmen Sayısı
-                7: 8,  // Son 30 Güne Ait Aktif Kullanım Oranı
-                8: 9,  // Son 90 Güne Ait Aktif Öğretmen Sayısı
-                9: 10, // Son 90 Güne Ait Aktif Kullanım Oranı
-                10: 11, // Kayıtlı Öğrenci Sayısı
-                11: 12, // Son 1 Güne Ait Aktif Öğrenci Sayısı
-                12: 13, // Son 1 Güne Ait Aktif Kullanım Oranı
-                13: 14, // Son 7 Güne Ait Aktif Öğrenci Sayısı
-                14: 15, // Son 7 Güne Ait Aktif Kullanım Oranı
-                15: 16, // Son 30 Güne Ait Aktif Öğrenci Sayısı
-                16: 17, // Son 30 Güne Ait Aktif Kullanım Oranı
-                17: 18, // Son 90 Güne Ait Aktif Öğrenci Sayısı
-                18: 19  // Son 90 Güne Ait Aktif Kullanım Oranı
-            };
-            
-            const sortColumn = columnMapping[sortOptionIndex] || columnIndex;
-
-            rows.sort((a, b) => {
-                const aValue = a.cells[sortColumn].textContent.trim();
-                const bValue = b.cells[sortColumn].textContent.trim();
-                
-                const aNum = parseFloat(aValue);
-                const bNum = parseFloat(bValue);
-                
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return bNum - aNum; // Büyükten küçüğe
-                }
-                return bValue.localeCompare(aValue); // Metin için
-            });
-
-            const fixedRows = Array.from(tbody.rows).slice(0, 4);
-            while (tbody.firstChild) {
-                tbody.removeChild(tbody.firstChild);
+                return processTableData(doc);
+            } catch (error) {
+                console.error('Veri çekme hatası:', error);
             }
-            
-            fixedRows.concat(rows).forEach(row => tbody.appendChild(row));
         }
+
+        function processTableData(doc) {
+            const table = doc.querySelector('table');
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const headers = [];
+            const data = [];
+
+            // İlk 5 satırı sabit başlıklar olarak işle
+            for (let i = 0; i < 5; i++) {
+                if (rows[i]) {
+                    const cells = Array.from(rows[i].querySelectorAll('td'));
+                    const rowData = cells.map(cell => cell.textContent.trim());
+                    headers.push(rowData);
+                }
+            }
+
+            // Geri kalan satırları veri olarak işle
+            for (let i = 5; i < rows.length; i++) {
+                const cells = Array.from(rows[i].querySelectorAll('td'));
+                const rowData = cells.map(cell => cell.textContent.trim());
+                data.push(rowData);
+            }
+
+            createSortableTable(headers, data);
+        }
+
+        function createSortableTable(headers, data) {
+            const container = document.getElementById('tableContainer');
+            const table = document.createElement('table');
+            
+            // Başlık satırlarını ekle (ilk 5 satır)
+            headers.forEach((headerRow, index) => {
+                const tr = document.createElement('tr');
+                tr.classList.add('fixed-row');
+                headerRow.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            });
+
+            // Sıralama butonlarını ekle
+            const buttonRow = document.createElement('tr');
+            for (let i = 2; i < 19; i++) { // C4'ten T4'e kadar (3. indeksten 19. indekse)
+                const td = document.createElement('td');
+                const button = document.createElement('button');
+                button.textContent = '▼ Sırala';
+                button.className = 'sort-button';
+                button.onclick = () => sortTable(i, data, table);
+                td.appendChild(button);
+                buttonRow.appendChild(td);
+            }
+            table.appendChild(buttonRow);
+
+            // Veri satırlarını ekle
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            });
+
+            container.appendChild(table);
+        }
+
+        function sortTable(columnIndex, data, table) {
+            // Veriyi sırala
+            const sortedData = [...data].sort((a, b) => {
+                const aVal = parseFloat(a[columnIndex]) || a[columnIndex];
+                const bVal = parseFloat(b[columnIndex]) || b[columnIndex];
+                
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return bVal - aVal; // Büyükten küçüğe sıralama
+                }
+                return String(bVal).localeCompare(String(aVal));
+            });
+
+            // Tabloyu güncelle (ilk 6 satırı koruyarak - 5 sabit satır + 1 buton satırı)
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const fixedRows = rows.slice(0, 6); // İlk 6 satırı koru
+            
+            // Eski veri satırlarını kaldır
+            while (table.rows.length > 6) {
+                table.deleteRow(6);
+            }
+
+            // Sıralanmış veriyi ekle
+            sortedData.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            });
+        }
+
+        // Sayfa yüklendiğinde tabloyu oluştur
+        document.addEventListener('DOMContentLoaded', fetchTableData);
     </script>
 </body>
-</html>
+</html> 
