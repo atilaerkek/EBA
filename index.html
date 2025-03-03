@@ -70,12 +70,22 @@
         th:nth-child(1), th:nth-child(2) {
             cursor: default; /* İlk iki sütunda tıklama imlecini kaldır */
         }
+        /* Sabit satır stili */
+        thead tr.fixed-header {
+            position: sticky;
+            top: 0;
+            background-color: #f1f1f1;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
     <h1>Google Sheets Verileri</h1>
     <table id="dataTable">
         <thead>
+            <tr class="fixed-header">
+                <th colspan="3">Bu tablodaki veriler 02.03.2025 tarihine kadar olan bilgileri içermektedir</th>
+            </tr>
             <tr id="headerRow"></tr>
         </thead>
         <tbody id="dataBody"></tbody>
