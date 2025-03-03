@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Öğretmen ve Öğrenci Verileri</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .dropdowns {
+            margin-bottom: 20px;
+        }
+        select {
+            padding: 8px;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50; /* Yeşil (genel başlık için) */
+            color: white;
+            font-weight: bold;
+            white-space: nowrap;
+            cursor: pointer;
+            position: relative;
+            padding-right: 25px;
+        }
+        th:hover {
+            background-color: #45a049;
+        }
+        th.active {
+            background-color: #388E3C;
+        }
+        /* Öğretmen başlıkları (mor arka plan) */
+        th.teacher-header {
+            background-color: #6A1B9A; /* Mor */
+        }
+        /* Öğrenci başlıkları (turuncu arka plan) */
+        th.student-header {
+            background-color: #F57C00; /* Turuncu */
+        }
+        td {
+            word-wrap: break-word;
+        }
+        /* Standart sütun genişliği */
+        th:not(.dynamic-width), td:not(.dynamic-width) {
+            width: 120px; /* Standart genişlik */
+        }
+        /* Dinamik genişlik (İl/İlçe/Okul için) */
+        th.dynamic-width, td.dynamic-width {
+            width: 360px; /* Diğer sütunların 3 katı */
+            min-width: 360px;
+            max-width: 360px;
+            white-space: normal;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .sort-indicator {
+            position: absolute;
+            right: 5px;
+            font-size: 18px;
+            color: #222;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dropdowns">
+            <select id="categorySelect">
+                <option value="">Kategori Seçin</option>
+                <option value="teacher">Öğretmen</option>
+                <option value="student">Öğrenci</option>
+            </select>
+            <select id="fieldSelect" disabled>
+                <option value="">Alan Seçin</option>
+            </select>
+        </div>
+        <table id="dataTable">
+            <thead>
+                <tr id="headerRow"></tr>
+            </thead>
+            <tbody id="dataBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
+        let data = [];
+        let sortDirection = {};
+
+        // Verileri çekme
+        function loadData() {
+            Papa.parse(csvUrl, {
+                download: true,
+                header: false,
+                complete: function(results) {
+                    data = results.data.filter(row => row.some(cell => cell.trim() !== ""));
+                    updateDropdowns(); // Dropdown'ları güncelle
+                },
+                error: function(error) {
+                    console.error("CSV çekme hatası:", error);
+                    alert("Veri çekilirken bir hata oluştu.");
+                }
+            });
+        }
+
+        // Dropdown'ları güncelle
+        function updateDropdowns() {
+            let categorySelect = document.getElementById("categorySelect");
+            let fieldSelect = document.getElementById("fieldSelect");
+
+            categorySelect.addEventListener("change", () => {
+                fieldSelect.disabled = false;
+                fieldSelect.innerHTML = '<option value="">Alan Seçin</option>';
+
+                if (categorySelect.value === "teacher") {
+                    const teacherFields = [
+                        "Kayıtlı Öğretmen Sayısı", "Son 1 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
+                        "Son 7 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
+                        "Son 30 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
+                        "Son 90 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı"
+                    ];
+                    teacherFields.forEach(field => {
+                        let option = document.createElement("option");
+                        option.value = field;
+                        option.textContent = field;
+                        fieldSelect.appendChild(option);
+                    });
+                } else if (categorySelect.value === "student") {
+                    const studentFields = [
+                        "Kayıtlı Öğrenci Sayısı", "Son 1 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı",
+                        "Son 7 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı",
+                        "Son 30 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı",
+                        "Son 90 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı"
+                    ];
+                    studentFields.forEach(field => {
+                        let option = document.createElement("option");
+                        option.value = field;
+                        option.textContent = field;
+                        fieldSelect.appendChild(option);
+                    });
+                }
+                updateTable(categorySelect.value, "");
+            });
+
+            fieldSelect.addEventListener("change", () => {
+                updateTable(categorySelect.value, fieldSelect.value);
+            });
+        }
+
+        // Tabloyu güncelle
+        function updateTable(category, selectedField) {
+            if (!category || !selectedField) {
+                document.getElementById("dataTable").style.display = "none";
+                return;
+            }
+            document.getElementById("dataTable").style.display = "table";
+
+            let headers, rows;
+            if (category === "teacher") {
+                headers = ["İl/İlçe/Okul", "Kayıtlı Öğretmen Sayısı", "Son 1 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı", "Son 7 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı", "Son 30 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı", "Son 90 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı"];
+            } else { // student
+                headers = ["İl/İlçe/Okul", "Kayıtlı Öğrenci Sayısı", "Son 1 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı", "Son 7 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı", "Son 30 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı", "Son 90 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı"];
+            }
+
+            rows = data.slice(1).filter(row => row[1] && row[1].trim() !== ""); // Boş satırları filtrele
+
+            let headerRow = document.getElementById("headerRow");
+            headerRow.innerHTML = "";
+            headers.forEach((header, index) => {
+                let th = document.createElement("th");
+                th.textContent = header;
+                if (category === "teacher") {
+                    th.classList.add("teacher-header");
+                } else {
+                    th.classList.add("student-header");
+                }
+                if (index > 0) { // İlk sütunda (İl/İlçe/Okul) sıralama yok
+                    let indicator = document.createElement("span");
+                    indicator.className = "sort-indicator";
+                    indicator.textContent = "↓";
+                    th.appendChild(indicator);
+                    th.addEventListener("click", () => sortTable(index, category));
+                }
+                if (index === 0) th.classList.add("dynamic-width"); // İlk sütun geniş
+                headerRow.appendChild(th);
+                if (index > 0) sortDirection[index] = 1;
+            });
+
+            // Seçilen alana göre sıralama
+            let columnIndex = headers.indexOf(selectedField);
+            if (columnIndex > 0) {
+                sortTable(columnIndex, category);
+            } else {
+                populateTable(rows, category);
+            }
+        }
+
+        // Tabloyu verilerle doldur
+        function populateTable(rows, category) {
+            let tbody = document.getElementById("dataBody");
+            tbody.innerHTML = "";
+            rows.forEach(row => {
+                let tr = document.createElement("tr");
+                row.forEach((cell, index) => {
+                    let td = document.createElement("td");
+                    td.textContent = cell.trim();
+                    if (index === 0) td.classList.add("dynamic-width"); // İlk sütun geniş
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Sütuna göre sıralama fonksiyonu (sadece 1. sütundan sonrası sıralanabilir)
+        function sortTable(columnIndex, category) {
+            if (columnIndex <= 0) return;
+
+            let rows = data.slice(1).filter(row => row[1] && row[1].trim() !== "");
+            let direction = sortDirection[columnIndex] || 1;
+
+            // Önceki aktif sütunu temizle
+            document.querySelectorAll("th").forEach(th => {
+                th.classList.remove("active");
+                if (th.querySelector(".sort-indicator")) {
+                    th.querySelector(".sort-indicator").textContent = "↓";
+                }
+            });
+
+            rows.sort((a, b) => {
+                let valA = a[columnIndex].trim();
+                let valB = b[columnIndex].trim();
+                let numA = parseFloat(valA);
+                let numB = parseFloat(valB);
+
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return direction * (numB - numA); // Sayısal sıralama (büyükten küçüğe)
+                } else {
+                    return direction * valB.localeCompare(valA); // Metin sıralama
+                }
+            });
+
+            sortDirection[columnIndex] = -direction;
+            let indicator = document.querySelectorAll(".sort-indicator")[columnIndex];
+            indicator.textContent = direction === 1 ? "↓" : "↑";
+            document.querySelectorAll("th")[columnIndex].classList.add("active");
+
+            populateTable(rows, category);
+        }
+
+        // Sayfayı yüklerken verileri göster
+        window.onload = loadData;
+    </script>
+</body>
+</html>
