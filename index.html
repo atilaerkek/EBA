@@ -8,7 +8,7 @@
     <style>
         table {
             border-collapse: collapse;
-            width: 80%;
+            width: 90%;
             margin: 20px auto;
             font-family: Arial, sans-serif;
         }
@@ -16,24 +16,34 @@
             border: 1px solid #333;
             padding: 10px;
             text-align: center;
-            min-width: 100px; /* Sabit genişlik */
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #4CAF50; /* Yeşil başlık */
+            color: white;
+            font-weight: bold;
+            white-space: nowrap; /* Başlıkların taşmasını önler */
             cursor: pointer;
             position: relative;
+            padding-right: 20px; /* Ok için yer bırak */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         th:hover {
-            background-color: #ddd;
+            background-color: #45a049; /* Hover efekti */
         }
-        th::after {
-            content: " ↓↑"; /* Sıralama simgesi */
-            font-size: 12px;
-            position: absolute;
-            right: 5px;
+        th.active {
+            background-color: #388E3C; /* Aktif sıralama sütunu */
+        }
+        td {
+            word-wrap: break-word; /* Uzun metinlerde kelimeyi kır */
+            max-width: 300px; /* Maksimum genişlik sınırı */
         }
         tbody tr:nth-child(even) {
             background-color: #f9f9f9; /* Çift satırlara renk */
+        }
+        .sort-indicator {
+            position: absolute;
+            right: 5px;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -49,7 +59,8 @@
     <script>
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
         let data = [];
-        let sortDirection = {}; // Her sütun için sıralama yönünü tutar
+        let sortDirection = {};
+        let currentSortColumn = null;
 
         // CSV verisini çekme ve tabloya yükleme
         function loadData() {
@@ -66,9 +77,13 @@
                     headers.forEach((header, index) => {
                         let th = document.createElement("th");
                         th.textContent = header;
+                        let indicator = document.createElement("span");
+                        indicator.className = "sort-indicator";
+                        indicator.textContent = ""; // Başlangıçta boş
+                        th.appendChild(indicator);
                         th.addEventListener("click", () => sortTable(index));
                         headerRow.appendChild(th);
-                        sortDirection[index] = 1; // Varsayılan yön: büyükten küçüğe
+                        sortDirection[index] = 1; // Varsayılan: büyükten küçüğe
                     });
 
                     // Verileri ekle
@@ -99,8 +114,12 @@
         // Sütuna göre sıralama fonksiyonu
         function sortTable(columnIndex) {
             let rows = data.slice(1); // Başlık hariç veriler
-            let direction = sortDirection[columnIndex] || 1; // 1: büyükten küçüğe, -1: küçükten büyüğe
+            let direction = sortDirection[columnIndex] || 1;
 
+            // Önceki aktif sütunu temizle
+            document.querySelectorAll("th").forEach(th => th.classList.remove("active"));
+
+            // Sıralama yap
             rows.sort((a, b) => {
                 let valA = a[columnIndex].trim();
                 let valB = b[columnIndex].trim();
@@ -114,8 +133,13 @@
                 }
             });
 
-            // Yönü tersine çevir
+            // Yönü güncelle ve ok simgesini ekle
             sortDirection[columnIndex] = -direction;
+            let indicator = document.querySelectorAll(".sort-indicator")[columnIndex];
+            indicator.textContent = direction === 1 ? "↓" : "↑"; // Sıralama yönü
+            document.querySelectorAll("th")[columnIndex].classList.add("active");
+
+            currentSortColumn = columnIndex;
             populateTable(rows);
         }
 
