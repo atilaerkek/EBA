@@ -24,7 +24,7 @@
             white-space: nowrap;
             cursor: pointer;
             position: relative;
-            padding-right: 20px;
+            padding-right: 25px; /* Simgeler için daha fazla yer */
         }
         th:hover {
             background-color: #45a049;
@@ -36,13 +36,14 @@
             word-wrap: break-word;
         }
         /* Standart sütun genişliği */
-        th:not(.dynamic-width), td:not(.dynamic-width) {
-            width: 120px; /* Rakamlar ve kısa yazılar için standart genişlik */
+        th:not(.school-column), td:not(.school-column) {
+            width: 120px; /* Standart genişlik */
         }
-        /* Dinamik genişlik "İl/İlçe/Okul" sütunu için */
-        th.dynamic-width, td.dynamic-width {
-            min-width: 200px; /* Minimum genişlik */
-            max-width: 400px; /* Maksimum sınır */
+        /* "İl/İlçe/Okul" sütunu için genişlik */
+        th.school-column, td.school-column {
+            width: 360px; /* Diğer sütunların 3 katı */
+            min-width: 360px;
+            max-width: 360px;
             white-space: normal; /* Uzun metinler için kırılma */
         }
         tbody tr:nth-child(even) {
@@ -51,7 +52,9 @@
         .sort-indicator {
             position: absolute;
             right: 5px;
-            font-size: 14px;
+            font-size: 16px; /* Daha büyük ve belirgin simge */
+            color: white; /* Beyaz renk ile görünür */
+            font-weight: bold;
         }
     </style>
 </head>
@@ -85,10 +88,10 @@
                     headers.forEach((header, index) => {
                         let th = document.createElement("th");
                         th.textContent = header;
-                        if (index === 0) th.classList.add("dynamic-width"); // İlk sütun "İl/İlçe/Okul"
+                        if (index === 0) th.classList.add("school-column"); // İlk sütun "İl/İlçe/Okul"
                         let indicator = document.createElement("span");
                         indicator.className = "sort-indicator";
-                        indicator.textContent = "";
+                        indicator.textContent = "↓"; // Varsayılan olarak aşağı ok
                         th.appendChild(indicator);
                         th.addEventListener("click", () => sortTable(index));
                         headerRow.appendChild(th);
@@ -114,7 +117,7 @@
                 row.forEach((cell, index) => {
                     let td = document.createElement("td");
                     td.textContent = cell.trim();
-                    if (index === 0) td.classList.add("dynamic-width"); // İlk sütun "İl/İlçe/Okul"
+                    if (index === 0) td.classList.add("school-column"); // İlk sütun "İl/İlçe/Okul"
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
@@ -127,7 +130,10 @@
             let direction = sortDirection[columnIndex] || 1;
 
             // Önceki aktif sütunu temizle
-            document.querySelectorAll("th").forEach(th => th.classList.remove("active"));
+            document.querySelectorAll("th").forEach(th => {
+                th.classList.remove("active");
+                th.querySelector(".sort-indicator").textContent = "↓"; // Varsayılan ok
+            });
 
             // Sıralama yap
             rows.sort((a, b) => {
