@@ -38,14 +38,6 @@
             font-weight: bold;
             white-space: nowrap;
         }
-        /* Öğretmen başlıkları (mor arka plan) */
-        th.teacher-header {
-            background-color: #6A1B9A; /* Mor */
-        }
-        /* Öğrenci başlıkları (turuncu arka plan) */
-        th.student-header {
-            background-color: #F57C00; /* Turuncu */
-        }
         td {
             word-wrap: break-word;
         }
@@ -177,9 +169,9 @@
 
             let headers, rows;
             if (category === "teacher") {
-                headers = ["İl/İlçe/Okul", "Kayıtlı Öğretmen Sayısı", "Son 1 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı", "Son 7 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı", "Son 30 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı", "Son 90 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı"];
+                headers = ["İl/İlçe/Okul", selectedField]; // Yalnızca İl/İlçe/Okul ve seçilen alan gösteriliyor
             } else { // student
-                headers = ["İl/İlçe/Okul", "Kayıtlı Öğrenci Sayısı", "Son 1 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı", "Son 7 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı", "Son 30 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı", "Son 90 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı"];
+                headers = ["İl/İlçe/Okul", selectedField]; // Yalnızca İl/İlçe/Okul ve seçilen alan gösteriliyor
             }
 
             rows = data.slice(1).filter(row => row[1] && row[1].trim() !== ""); // Boş satırları filtrele
@@ -189,11 +181,6 @@
             headers.forEach((header, index) => {
                 let th = document.createElement("th");
                 th.textContent = header;
-                if (category === "teacher") {
-                    th.classList.add("teacher-header");
-                } else {
-                    th.classList.add("student-header");
-                }
                 if (index === 0) th.classList.add("dynamic-width"); // İlk sütun geniş
                 headerRow.appendChild(th);
             });
@@ -214,10 +201,12 @@
             rows.forEach(row => {
                 let tr = document.createElement("tr");
                 row.forEach((cell, index) => {
-                    let td = document.createElement("td");
-                    td.textContent = cell.trim();
-                    if (index === 0) td.classList.add("dynamic-width"); // İlk sütun geniş
-                    tr.appendChild(td);
+                    if (index === 0 || headers.includes(row[0])) { // Yalnızca İl/İlçe/Okul ve seçilen alan gösteriliyor
+                        let td = document.createElement("td");
+                        td.textContent = cell.trim();
+                        if (index === 0) td.classList.add("dynamic-width"); // İlk sütun geniş
+                        tr.appendChild(td);
+                    }
                 });
                 tbody.appendChild(tr);
             });
