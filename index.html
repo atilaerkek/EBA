@@ -24,7 +24,7 @@
             white-space: nowrap;
             cursor: pointer;
             position: relative;
-            padding-right: 25px; /* Simgeler için daha fazla yer */
+            padding-right: 25px; /* Simgeler için yer */
         }
         th:hover {
             background-color: #45a049;
@@ -35,11 +35,11 @@
         td {
             word-wrap: break-word;
         }
-        /* Standart sütun genişliği */
+        /* Standart sütun genişliği (tüm sütunlar için varsayılan) */
         th:not(.school-column), td:not(.school-column) {
             width: 120px; /* Standart genişlik */
         }
-        /* "İl/İlçe/Okul" sütunu için genişlik */
+        /* "İl/İlçe/Okul" sütunu için genişlik (ikinci sütun, index 1) */
         th.school-column, td.school-column {
             width: 360px; /* Diğer sütunların 3 katı */
             min-width: 360px;
@@ -52,9 +52,17 @@
         .sort-indicator {
             position: absolute;
             right: 5px;
-            font-size: 16px; /* Daha büyük ve belirgin simge */
-            color: white; /* Beyaz renk ile görünür */
-            font-weight: bold;
+            font-size: 18px; /* Daha büyük ve belirgin */
+            color: #222; /* Daha koyu renk */
+            font-weight: bold; /* Daha kalın */
+        }
+        /* Sıralama butonunu birinci ve ikinci sütundan çıkar */
+        th:nth-child(1) .sort-indicator,
+        th:nth-child(2) .sort-indicator {
+            display: none; /* İlk iki sütunda simgeyi gizle */
+        }
+        th:nth-child(1), th:nth-child(2) {
+            cursor: default; /* İlk iki sütunda tıklama imlecini kaldır */
         }
     </style>
 </head>
@@ -88,14 +96,16 @@
                     headers.forEach((header, index) => {
                         let th = document.createElement("th");
                         th.textContent = header;
-                        if (index === 0) th.classList.add("school-column"); // İlk sütun "İl/İlçe/Okul"
+                        if (index === 1) th.classList.add("school-column"); // İkinci sütun "İl/İlçe/Okul"
                         let indicator = document.createElement("span");
                         indicator.className = "sort-indicator";
-                        indicator.textContent = "↓"; // Varsayılan olarak aşağı ok
+                        if (index > 1) indicator.textContent = "↓"; // Sadece üçüncü sütundan sonrası için simge
                         th.appendChild(indicator);
-                        th.addEventListener("click", () => sortTable(index));
+                        if (index > 1) {
+                            th.addEventListener("click", () => sortTable(index));
+                        }
                         headerRow.appendChild(th);
-                        sortDirection[index] = 1; // Varsayılan: büyükten küçüğe
+                        if (index > 1) sortDirection[index] = 1; // Sadece sıralanabilir sütunlar için
                     });
 
                     // Verileri ekle
@@ -117,7 +127,7 @@
                 row.forEach((cell, index) => {
                     let td = document.createElement("td");
                     td.textContent = cell.trim();
-                    if (index === 0) td.classList.add("school-column"); // İlk sütun "İl/İlçe/Okul"
+                    if (index === 1) td.classList.add("school-column"); // İkinci sütun "İl/İlçe/Okul"
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
@@ -126,13 +136,17 @@
 
         // Sütuna göre sıralama fonksiyonu
         function sortTable(columnIndex) {
+            if (columnIndex <= 1) return; // İlk iki sütunu sıralama
+
             let rows = data.slice(1); // Başlık hariç veriler
             let direction = sortDirection[columnIndex] || 1;
 
             // Önceki aktif sütunu temizle
             document.querySelectorAll("th").forEach(th => {
                 th.classList.remove("active");
-                th.querySelector(".sort-indicator").textContent = "↓"; // Varsayılan ok
+                if (th.querySelector(".sort-indicator")) {
+                    th.querySelector(".sort-indicator").textContent = "↓"; // Varsayılan ok
+                }
             });
 
             // Sıralama yap
