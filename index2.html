@@ -180,7 +180,7 @@
                 headerRow.appendChild(th);
             });
 
-            // Seçilen alana göre otomatik sıralama
+            // Seçilen alana göre otomatik sıralama (büyükten küçüğe)
             let columnIndex = headers.indexOf(selectedField);
             if (columnIndex > 0) {
                 sortTable(rows, columnIndex, category);
@@ -205,13 +205,13 @@
             });
         }
 
-        // Sütuna göre sıralama fonksiyonu (otomatik, büyükten küçüğe)
+        // Sütuna göre sıralama fonksiyonu (otomatik, sadece büyükten küçüğe)
         function sortTable(rows, columnIndex, category) {
             rows.sort((a, b) => {
                 let valA = a[columnIndex].trim();
                 let valB = b[columnIndex].trim();
-                let numA = parseFloat(valA);
-                let numB = parseFloat(valB);
+                let numA = parseFloat(valA.replace('%', '')); // Yüzde işaretini çıkar
+                let numB = parseFloat(valB.replace('%', ''));
 
                 if (!isNaN(numA) && !isNaN(numB)) {
                     return numB - numA; // Sayısal sıralama (büyükten küçüğe)
