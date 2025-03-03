@@ -84,9 +84,9 @@
     <table id="dataTable">
         <thead>
             <tr class="fixed-header">
-                <th colspan="3">Bu tablodaki veriler 02.03.2025 tarihine kadar olan bilgileri içermektedir</th>
+                <th colspan="2">Bu tablodaki veriler 02.03.2025 tarihine kadar olan bilgileri içermektedir</th>
             </tr>
-            <tr id="headerRow"></tr>
+            <tr class="fixed-header" id="headerRow"></tr>
         </thead>
         <tbody id="dataBody"></tbody>
     </table>
@@ -143,9 +143,13 @@
                 let tr = document.createElement("tr");
                 row.forEach((cell, index) => {
                     let td = document.createElement("td");
-                    td.textContent = cell.trim();
-                    if (index === 0) td.classList.add("province-district-column"); // İlk sütun "İl/İlçe"
-                    if (index === 1) td.classList.add("school-column"); // İkinci sütun "Okul Adı"
+                    if (index === 0) {
+                        // 1. ve 2. sütunu birleştir
+                        td.setAttribute("colspan", "2");
+                        td.textContent = row[0].trim() + " " + row[1].trim();
+                    } else if (index > 1) {
+                        td.textContent = cell.trim();
+                    }
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
