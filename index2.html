@@ -55,6 +55,11 @@
         tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+        #errorMessage {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -74,6 +79,7 @@
             </thead>
             <tbody id="dataBody"></tbody>
         </table>
+        <div id="errorMessage"></div>
     </div>
 
     <script>
@@ -87,11 +93,17 @@
                 header: false,
                 complete: function(results) {
                     data = results.data.filter(row => row.some(cell => cell.trim() !== ""));
+                    if (data.length <= 1) {
+                        document.getElementById("errorMessage").textContent = "Veri çekilemedi veya tablo boş.";
+                        document.getElementById("errorMessage").style.display = "block";
+                        return;
+                    }
                     initializePage(); // Sayfayı otomatik başlat
                 },
                 error: function(error) {
                     console.error("CSV çekme hatası:", error);
-                    alert("Veri çekilirken bir hata oluştu.");
+                    document.getElementById("errorMessage").textContent = "Veri çekilirken bir hata oluştu: " + error.message;
+                    document.getElementById("errorMessage").style.display = "block";
                 }
             });
         }
@@ -197,6 +209,10 @@
         function populateTable(rows, category) {
             let tbody = document.getElementById("dataBody");
             tbody.innerHTML = "";
+            if (rows.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='2'>Veri bulunamadı.</td></tr>";
+                return;
+            }
             rows.forEach(row => {
                 let tr = document.createElement("tr");
                 row.forEach((cell, index) => {
