@@ -36,42 +36,52 @@
     </style>
 </head>
 <body>
-    <div id="tableContainer">
-        <table>
-            <thead>
-                <!-- İlk 4 satırı buraya manuel ekleyin -->
-                <tr class="fixed-header"><td colspan="20">Satır 1</td></tr>
-                <tr class="fixed-header"><td colspan="20">Satır 2</td></tr>
-                <tr class="fixed-header"><td colspan="20">Satır 3</td></tr>
-                <tr class="fixed-header">
-                    <td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td><td>G</td><td>H</td><td>I</td><td>J</td>
-                    <td>K</td><td>L</td><td>M</td><td>N</td><td>O</td><td>P</td><td>Q</td><td>R</td><td>S</td><td>T</td>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Örnek veri -->
-                <tr><td>1</td><td>2</td><td>5</td><td>8</td><td>3</td><td>9</td><td>4</td><td>7</td><td>6</td><td>1</td>
-                    <td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td></tr>
-                <tr><td>2</td><td>1</td><td>9</td><td>7</td><td>4</td><td>8</td><td>5</td><td>6</td><td>3</td><td>2</td>
-                    <td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>1</td></tr>
-            </tbody>
-        </table>
-    </div>
+    <div id="tableContainer"></div>
 
     <script>
-        // 4. satırdaki hücrelere (C4'ten T4'e) sıralama butonları ekleme
-        const table = document.querySelector('table');
-        const headerRow = table.querySelector('thead').rows[3];
-        for (let i = 2; i <= 19; i++) { // C4 (2) to T4 (19)
-            const cell = headerRow.cells[i];
-            const button = document.createElement('button');
-            button.textContent = 'Sırala';
-            button.className = 'sort-button';
-            button.onclick = () => sortTable(i);
-            cell.appendChild(button);
-        }
+        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pubhtml')
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const table = doc.querySelector('table');
+                
+                const newTable = document.createElement('table');
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+                
+                const rows = Array.from(table.rows);
+                
+                // İlk 4 satırı thead'e ekleyerek sabit yapma
+                for (let i = 0; i < 4; i++) {
+                    const row = rows[i].cloneNode(true);
+                    row.classList.add('fixed-header');
+                    thead.appendChild(row);
+                }
+
+                // 4. satırdaki (index 3) hücrelere sıralama butonları ekleme (C4'ten T4'e)
+                const headerRow = thead.rows[3];
+                for (let i = 2; i <= 19; i++) { // C4 (2) to T4 (19)
+                    const cell = headerRow.cells[i];
+                    const button = document.createElement('button');
+                    button.textContent = 'Sırala';
+                    button.className = 'sort-button';
+                    button.onclick = () => sortTable(i);
+                    cell.appendChild(button);
+                }
+
+                // Geri kalan satırları tbody'ye ekleme
+                rows.slice(4).forEach(row => {
+                    tbody.appendChild(row.cloneNode(true));
+                });
+                
+                newTable.appendChild(thead);
+                newTable.appendChild(tbody);
+                document.getElementById('tableContainer').appendChild(newTable);
+            });
 
         function sortTable(columnIndex) {
+            const table = document.querySelector('table');
             const tbody = table.querySelector('tbody');
             const rows = Array.from(tbody.rows);
             
