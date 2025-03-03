@@ -37,15 +37,6 @@
             color: white;
             font-weight: bold;
             white-space: nowrap;
-            cursor: pointer;
-            position: relative;
-            padding-right: 25px;
-        }
-        th:hover {
-            background-color: #45a049;
-        }
-        th.active {
-            background-color: #388E3C;
         }
         /* Öğretmen başlıkları (mor arka plan) */
         th.teacher-header {
@@ -72,13 +63,6 @@
         tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-        .sort-indicator {
-            position: absolute;
-            right: 5px;
-            font-size: 18px;
-            color: #222;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
@@ -104,7 +88,6 @@
     <script>
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
         let data = [];
-        let sortDirection = {};
 
         // Verileri çekme
         function loadData() {
@@ -113,7 +96,7 @@
                 header: false,
                 complete: function(results) {
                     data = results.data.filter(row => row.some(cell => cell.trim() !== ""));
-                    updateDropdowns(); // Dropdown'ları güncelle
+                    updateDropdowns();
                 },
                 error: function(error) {
                     console.error("CSV çekme hatası:", error);
@@ -161,12 +144,12 @@
                 updateTable(categorySelect.value, "");
             });
 
-            fieldSelect.addEventListener("change", () => {
-                updateTable(categorySelect.value, fieldSelect.value);
+            fieldSelect.addEventListener("change", (e) => {
+                updateTable(categorySelect.value, e.target.value);
             });
         }
 
-        // Tabloyu güncelle
+        // Tabloyu güncelle ve otomatik sırala
         function updateTable(category, selectedField) {
             if (!category || !selectedField) {
                 document.getElementById("dataTable").style.display = "none";
@@ -193,22 +176,14 @@
                 } else {
                     th.classList.add("student-header");
                 }
-                if (index > 0) { // İlk sütunda (İl/İlçe/Okul) sıralama yok
-                    let indicator = document.createElement("span");
-                    indicator.className = "sort-indicator";
-                    indicator.textContent = "↓";
-                    th.appendChild(indicator);
-                    th.addEventListener("click", () => sortTable(index, category));
-                }
                 if (index === 0) th.classList.add("dynamic-width"); // İlk sütun geniş
                 headerRow.appendChild(th);
-                if (index > 0) sortDirection[index] = 1;
             });
 
-            // Seçilen alana göre sıralama
+            // Seçilen alana göre otomatik sıralama
             let columnIndex = headers.indexOf(selectedField);
             if (columnIndex > 0) {
-                sortTable(columnIndex, category);
+                sortTable(rows, columnIndex, category);
             } else {
                 populateTable(rows, category);
             }
@@ -230,21 +205,8 @@
             });
         }
 
-        // Sütuna göre sıralama fonksiyonu (sadece 1. sütundan sonrası sıralanabilir)
-        function sortTable(columnIndex, category) {
-            if (columnIndex <= 0) return;
-
-            let rows = data.slice(1).filter(row => row[1] && row[1].trim() !== "");
-            let direction = sortDirection[columnIndex] || 1;
-
-            // Önceki aktif sütunu temizle
-            document.querySelectorAll("th").forEach(th => {
-                th.classList.remove("active");
-                if (th.querySelector(".sort-indicator")) {
-                    th.querySelector(".sort-indicator").textContent = "↓";
-                }
-            });
-
+        // Sütuna göre sıralama fonksiyonu (otomatik, büyükten küçüğe)
+        function sortTable(rows, columnIndex, category) {
             rows.sort((a, b) => {
                 let valA = a[columnIndex].trim();
                 let valB = b[columnIndex].trim();
@@ -252,16 +214,11 @@
                 let numB = parseFloat(valB);
 
                 if (!isNaN(numA) && !isNaN(numB)) {
-                    return direction * (numB - numA); // Sayısal sıralama (büyükten küçüğe)
+                    return numB - numA; // Sayısal sıralama (büyükten küçüğe)
                 } else {
-                    return direction * valB.localeCompare(valA); // Metin sıralama
+                    return valB.localeCompare(valA); // Metin sıralama (büyükten küçüğe)
                 }
             });
-
-            sortDirection[columnIndex] = -direction;
-            let indicator = document.querySelectorAll(".sort-indicator")[columnIndex];
-            indicator.textContent = direction === 1 ? "↓" : "↑";
-            document.querySelectorAll("th")[columnIndex].classList.add("active");
 
             populateTable(rows, category);
         }
