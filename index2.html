@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Öğretmen ve Öğrenci Verileri</title>
+    <title>Google Sheets Verileri - Filtreleme ve Sıralama</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         body {
@@ -65,12 +65,8 @@
 <body>
     <div class="container">
         <div class="dropdowns">
-            <select id="categorySelect">
-                <option value="teacher">Öğretmen</option>
-                <option value="student">Öğrenci</option>
-            </select>
-            <select id="fieldSelect" disabled>
-                <option value="">Alan Seçin</option>
+            <select id="fieldSelect">
+                <option value="">Sütun Seçin</option>
             </select>
         </div>
         <table id="dataTable">
@@ -85,6 +81,7 @@
     <script>
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
         let data = [];
+        let headers = [];
 
         // Verileri çekme
         function loadData() {
@@ -108,105 +105,60 @@
             });
         }
 
-        // Sayfayı otomatik başlat (Öğretmen kategorisi ile)
+        // Sayfayı otomatik başlat (Öğretmen - Kayıtlı Öğretmen Sayısı ile)
         function initializePage() {
-            let categorySelect = document.getElementById("categorySelect");
+            headers = data[0]; // Başlıkları al
             let fieldSelect = document.getElementById("fieldSelect");
 
-            // Öğretmen kategorisini otomatik seç
-            categorySelect.value = "teacher";
-            fieldSelect.disabled = false;
-
-            const teacherFields = [
-                "Kayıtlı Öğretmen Sayısı", "Son 1 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
-                "Son 7 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
-                "Son 30 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
-                "Son 90 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı"
-            ];
-            teacherFields.forEach(field => {
+            // Başlıkları açılır listeye ekle (ilk sütun hariç, İl/İlçe/Okul)
+            headers.slice(2).forEach(header => { // 2. indexten sonrası (Öğretmen verileri)
                 let option = document.createElement("option");
-                option.value = field;
-                option.textContent = field;
+                option.value = header;
+                option.textContent = header;
                 fieldSelect.appendChild(option);
             });
 
-            // Varsayılan olarak ilk alanı seç ve tabloyu güncelle
-            fieldSelect.value = teacherFields[0]; // İlk alan (Kayıtlı Öğretmen Sayısı) seçili
-            updateTable("teacher", teacherFields[0]);
+            // Varsayılan olarak "Kayıtlı Öğretmen Sayısı" seçili ve tabloyu büyükten küçüğe sırala
+            fieldSelect.value = "Kayıtlı Öğretmen Sayısı";
+            updateTable("Kayıtlı Öğretmen Sayısı");
 
-            // Kategori değiştiğinde güncelle
-            categorySelect.addEventListener("change", () => {
-                fieldSelect.disabled = false;
-                fieldSelect.innerHTML = '<option value="">Alan Seçin</option>';
-
-                if (categorySelect.value === "teacher") {
-                    teacherFields.forEach(field => {
-                        let option = document.createElement("option");
-                        option.value = field;
-                        option.textContent = field;
-                        fieldSelect.appendChild(option);
-                    });
-                } else if (categorySelect.value === "student") {
-                    const studentFields = [
-                        "Kayıtlı Öğrenci Sayısı", "Son 1 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı",
-                        "Son 7 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı",
-                        "Son 30 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı",
-                        "Son 90 Güne Ait Aktif Öğrenci Sayısı", "Kullanım Oranı"
-                    ];
-                    studentFields.forEach(field => {
-                        let option = document.createElement("option");
-                        option.value = field;
-                        option.textContent = field;
-                        fieldSelect.appendChild(option);
-                    });
-                }
-                // Varsayılan olarak ilk alanı seç ve tabloyu güncelle
-                fieldSelect.value = fieldSelect.options[1].value; // İlk alan seçili
-                updateTable(categorySelect.value, fieldSelect.value);
-            });
-
+            // Sütun seçimi değiştiğinde tabloyu güncelle
             fieldSelect.addEventListener("change", (e) => {
-                updateTable(categorySelect.value, e.target.value);
+                updateTable(e.target.value);
             });
         }
 
         // Tabloyu güncelle ve otomatik sırala
-        function updateTable(category, selectedField) {
-            if (!category || !selectedField) {
+        function updateTable(selectedField) {
+            if (!selectedField) {
                 document.getElementById("dataTable").style.display = "none";
                 return;
             }
             document.getElementById("dataTable").style.display = "table";
 
-            let headers, rows;
-            if (category === "teacher") {
-                headers = ["İl/İlçe/Okul", selectedField]; // Yalnızca İl/İlçe/Okul ve seçilen alan gösteriliyor
-            } else { // student
-                headers = ["İl/İlçe/Okul", selectedField]; // Yalnızca İl/İlçe/Okul ve seçilen alan gösteriliyor
-            }
-
-            rows = data.slice(1).filter(row => row[1] && row[1].trim() !== ""); // Boş satırları filtrele
-
             let headerRow = document.getElementById("headerRow");
             headerRow.innerHTML = "";
-            headers.forEach((header, index) => {
+            let headersToShow = ["İl/İlçe/Okul", selectedField]; // Yalnızca İl/İlçe/Okul ve seçilen alan gösteriliyor
+            headersToShow.forEach((header, index) => {
                 let th = document.createElement("th");
                 th.textContent = header;
                 if (index === 0) th.classList.add("dynamic-width"); // İlk sütun geniş
                 headerRow.appendChild(th);
             });
 
-            // Seçilen alana göre otomatik sıralama (büyükten küçüğe)
+            let rows = data.slice(1).filter(row => row[1] && row[1].trim() !== ""); // Boş satırları filtrele, ikinci sütun (İl/İlçe/Okul) kontrolü
             let columnIndex = headers.indexOf(selectedField);
+
+            // Seçilen alana göre otomatik sıralama (büyükten küçüğe)
             if (columnIndex > 0) {
-                sortTable(rows, columnIndex, category);
+                sortTable(rows, columnIndex);
             } else {
-                populateTable(rows, category);
+                populateTable(rows);
             }
         }
 
         // Tabloyu verilerle doldur
-        function populateTable(rows, category) {
+        function populateTable(rows) {
             let tbody = document.getElementById("dataBody");
             tbody.innerHTML = "";
             if (rows.length === 0) {
@@ -228,7 +180,7 @@
         }
 
         // Sütuna göre sıralama fonksiyonu (otomatik, sadece büyükten küçüğe)
-        function sortTable(rows, columnIndex, category) {
+        function sortTable(rows, columnIndex) {
             rows.sort((a, b) => {
                 let valA = a[columnIndex].trim();
                 let valB = b[columnIndex].trim();
@@ -242,7 +194,7 @@
                 }
             });
 
-            populateTable(rows, category);
+            populateTable(rows);
         }
 
         // Sayfayı yüklerken verileri göster
