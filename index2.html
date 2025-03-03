@@ -69,7 +69,6 @@
     <div class="container">
         <div class="dropdowns">
             <select id="categorySelect">
-                <option value="">Kategori Seçin</option>
                 <option value="teacher">Öğretmen</option>
                 <option value="student">Öğrenci</option>
             </select>
@@ -96,7 +95,7 @@
                 header: false,
                 complete: function(results) {
                     data = results.data.filter(row => row.some(cell => cell.trim() !== ""));
-                    updateDropdowns();
+                    initializePage(); // Sayfayı otomatik başlat
                 },
                 error: function(error) {
                     console.error("CSV çekme hatası:", error);
@@ -105,22 +104,39 @@
             });
         }
 
-        // Dropdown'ları güncelle
-        function updateDropdowns() {
+        // Sayfayı otomatik başlat (Öğretmen kategorisi ile)
+        function initializePage() {
             let categorySelect = document.getElementById("categorySelect");
             let fieldSelect = document.getElementById("fieldSelect");
 
+            // Öğretmen kategorisini otomatik seç
+            categorySelect.value = "teacher";
+            fieldSelect.disabled = false;
+            fieldSelect.innerHTML = '<option value="">Alan Seçin</option>';
+
+            const teacherFields = [
+                "Kayıtlı Öğretmen Sayısı", "Son 1 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
+                "Son 7 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
+                "Son 30 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
+                "Son 90 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı"
+            ];
+            teacherFields.forEach(field => {
+                let option = document.createElement("option");
+                option.value = field;
+                option.textContent = field;
+                fieldSelect.appendChild(option);
+            });
+
+            // Varsayılan olarak ilk alanı seç ve tabloyu güncelle
+            fieldSelect.value = teacherFields[0]; // İlk alan (Kayıtlı Öğretmen Sayısı) seçili
+            updateTable("teacher", teacherFields[0]);
+
+            // Kategori değiştiğinde güncelle
             categorySelect.addEventListener("change", () => {
                 fieldSelect.disabled = false;
                 fieldSelect.innerHTML = '<option value="">Alan Seçin</option>';
 
                 if (categorySelect.value === "teacher") {
-                    const teacherFields = [
-                        "Kayıtlı Öğretmen Sayısı", "Son 1 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
-                        "Son 7 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
-                        "Son 30 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı",
-                        "Son 90 Güne Ait Aktif Öğretmen Sayısı", "Kullanım Oranı"
-                    ];
                     teacherFields.forEach(field => {
                         let option = document.createElement("option");
                         option.value = field;
@@ -141,7 +157,9 @@
                         fieldSelect.appendChild(option);
                     });
                 }
-                updateTable(categorySelect.value, "");
+                // Varsayılan olarak ilk alanı seç ve tabloyu güncelle
+                fieldSelect.value = fieldSelect.options[1].value; // İlk alan seçili
+                updateTable(categorySelect.value, fieldSelect.value);
             });
 
             fieldSelect.addEventListener("change", (e) => {
