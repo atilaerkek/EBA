@@ -41,8 +41,13 @@
         }
         /* "İl/İlçe/Okul" sütunu için genişlik (ikinci sütun, index 1) */
         th.school-column, td.school-column {
-            width: 120px; /* Daraltılmış genişlik */
+            width: auto; /* En uzun okul adı genişliğinde */
             text-align: left; /* Sola hizala */
+            white-space: nowrap; /* Tek satır */
+        }
+        /* "İl/İlçe" sütunu için genişlik */
+        th.province-district-column, td.province-district-column {
+            width: 120px; /* Öğretmen sayısı sütunu genişliğinde */
         }
         tbody tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -97,7 +102,8 @@
                     headers.forEach((header, index) => {
                         let th = document.createElement("th");
                         th.textContent = header;
-                        if (index === 1) th.classList.add("school-column"); // İkinci sütun "İl/İlçe/Okul"
+                        if (index === 0) th.classList.add("province-district-column"); // İlk sütun "İl/İlçe"
+                        if (index === 1) th.classList.add("school-column"); // İkinci sütun "Okul Adı"
                         let indicator = document.createElement("span");
                         indicator.className = "sort-indicator";
                         if (index > 1) indicator.textContent = "↓"; // Sadece üçüncü sütundan sonrası için simge
@@ -128,7 +134,8 @@
                 row.forEach((cell, index) => {
                     let td = document.createElement("td");
                     td.textContent = cell.trim();
-                    if (index === 1) td.classList.add("school-column"); // İkinci sütun "İl/İlçe/Okul"
+                    if (index === 0) td.classList.add("province-district-column"); // İlk sütun "İl/İlçe"
+                    if (index === 1) td.classList.add("school-column"); // İkinci sütun "Okul Adı"
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
