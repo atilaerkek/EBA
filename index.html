@@ -4,23 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google Sheets Verilerini Sıralama</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         table {
             border-collapse: collapse;
             width: 80%;
             margin: 20px auto;
+            font-family: Arial, sans-serif;
         }
         th, td {
-            border: 1px solid black;
-            padding: 8px;
+            border: 1px solid #333;
+            padding: 10px;
             text-align: center;
+            min-width: 100px; /* Sabit genişlik */
         }
         th {
             background-color: #f2f2f2;
             cursor: pointer;
+            position: relative;
         }
         th:hover {
             background-color: #ddd;
+        }
+        th::after {
+            content: " ↓↑"; /* Sıralama simgesi */
+            font-size: 12px;
+            position: absolute;
+            right: 5px;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9; /* Çift satırlara renk */
         }
     </style>
 </head>
@@ -34,19 +47,17 @@
     </table>
 
     <script>
-        // Google Sheets CSV bağlantısı
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
-
         let data = [];
+        let sortDirection = {}; // Her sütun için sıralama yönünü tutar
 
         // CSV verisini çekme ve tabloya yükleme
         function loadData() {
-            fetch(csvUrl)
-                .then(response => response.text())
-                .then(csvText => {
-                    // CSV'yi diziye çevir
-                    data = csvText.split('\n').map(row => row.split(','));
-
+            Papa.parse(csvUrl, {
+                download: true,
+                header: false,
+                complete: function(results) {
+                    data = results.data.filter(row => row.some(cell => cell.trim() !== "")); // Boş satırları filtrele
                     let headers = data[0];
                     let rows = data.slice(1);
 
@@ -57,12 +68,17 @@
                         th.textContent = header;
                         th.addEventListener("click", () => sortTable(index));
                         headerRow.appendChild(th);
+                        sortDirection[index] = 1; // Varsayılan yön: büyükten küçüğe
                     });
 
                     // Verileri ekle
                     populateTable(rows);
-                })
-                .catch(error => console.error("Veri çekme hatası:", error));
+                },
+                error: function(error) {
+                    console.error("CSV çekme hatası:", error);
+                    alert("Veri çekilirken bir hata oluştu.");
+                }
+            });
         }
 
         // Tabloyu verilerle doldur
@@ -73,7 +89,7 @@
                 let tr = document.createElement("tr");
                 row.forEach(cell => {
                     let td = document.createElement("td");
-                    td.textContent = cell;
+                    td.textContent = cell.trim(); // Gereksiz boşlukları kaldır
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
@@ -83,16 +99,23 @@
         // Sütuna göre sıralama fonksiyonu
         function sortTable(columnIndex) {
             let rows = data.slice(1); // Başlık hariç veriler
+            let direction = sortDirection[columnIndex] || 1; // 1: büyükten küçüğe, -1: küçükten büyüğe
+
             rows.sort((a, b) => {
-                let valA = parseFloat(a[columnIndex]) || a[columnIndex];
-                let valB = parseFloat(b[columnIndex]) || b[columnIndex];
-                // Büyükten küçüğe sıralama
-                if (typeof valA === "number" && typeof valB === "number") {
-                    return valB - valA;
+                let valA = a[columnIndex].trim();
+                let valB = b[columnIndex].trim();
+                let numA = parseFloat(valA);
+                let numB = parseFloat(valB);
+
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return direction * (numB - numA); // Sayısal sıralama
                 } else {
-                    return valB.localeCompare(valA); // Metin sıralama
+                    return direction * valB.localeCompare(valA); // Metin sıralama
                 }
             });
+
+            // Yönü tersine çevir
+            sortDirection[columnIndex] = -direction;
             populateTable(rows);
         }
 
