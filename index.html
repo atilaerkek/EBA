@@ -7,11 +7,14 @@
         table {
             border-collapse: collapse;
             width: 100%;
+            table-layout: fixed;
         }
         th, td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .sort-button {
             background-color: #4CAF50;
@@ -20,9 +23,13 @@
             padding: 5px 10px;
             cursor: pointer;
             margin: 2px;
+            width: 100%;
         }
         .fixed-row {
             background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+            z-index: 1;
         }
     </style>
 </head>
@@ -77,33 +84,42 @@
             headers.forEach((headerRow, index) => {
                 const tr = document.createElement('tr');
                 tr.classList.add('fixed-row');
-                headerRow.forEach(cell => {
+                headerRow.forEach((cell, colIndex) => {
                     const td = document.createElement('td');
                     td.textContent = cell;
+                    // Okul adı sütunu için özel stil
+                    if (colIndex === 1) { // B sütunu (okul adı)
+                        td.style.whiteSpace = 'nowrap';
+                        td.style.minWidth = '200px';
+                    }
                     tr.appendChild(td);
                 });
                 table.appendChild(tr);
             });
 
+            // Önce tabloyu container'a ekle
+            container.appendChild(table);
+
             // Sıralama butonlarını ekle
             const buttonRow = document.createElement('tr');
             buttonRow.classList.add('fixed-row');
-            for (let i = 0; i < headers[0].length; i++) {
+            
+            // Tüm sütunlar için td oluştur
+            headers[0].forEach((_, colIndex) => {
                 const td = document.createElement('td');
-                if (i >= 2 && i <= 18) { // C4'ten T4'e kadar
+                // Sadece C4'ten T4'e kadar olan sütunlara buton ekle
+                if (colIndex >= 2 && colIndex <= 18) {
                     const button = document.createElement('button');
                     button.textContent = '▼ Sırala';
                     button.className = 'sort-button';
-                    button.onclick = () => sortTable(i, data, table);
+                    button.onclick = () => sortTable(colIndex, data, table);
                     td.appendChild(button);
                 }
                 buttonRow.appendChild(td);
-            }
+            });
             table.appendChild(buttonRow);
 
-            container.appendChild(table);
-            
-            // Veri satırlarını en son ekle
+            // En son veri satırlarını ekle
             renderTableData(data, table);
         }
 
