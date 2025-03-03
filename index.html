@@ -1,226 +1,108 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets Verileri - Sabit Başlıklar ve Sıralama</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <title>Tablo Sıralama</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* Sayfanın kaydırmasını kontrol etmek için */
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            position: relative;
-        }
-        .dropdowns, .buttons {
-            margin: 20px 0;
-        }
-        button {
-            padding: 8px 16px;
-            margin-right: 10px;
-            font-size: 16px;
-            cursor: pointer;
-        }
         table {
             border-collapse: collapse;
             width: 100%;
         }
         th, td {
-            border: 1px solid #333;
+            border: 1px solid black;
             padding: 8px;
-            text-align: center;
-            white-space: nowrap; /* Metin taşmasını önler */
-        }
-        th {
-            background-color: #4CAF50;
-            color: white;
-            font-weight: bold;
-        }
-        .fixed-header, .fixed-columns {
-            background-color: #4CAF50;
-            position: sticky;
-            z-index: 1;
+            text-align: left;
         }
         .fixed-header {
-            top: 0;
-        }
-        .fixed-columns {
-            left: 0;
-        }
-        /* İlk 4 satır sabit */
-        tr:nth-child(-n+4) {
             position: sticky;
             top: 0;
-            z-index: 2;
+            background-color: #f0f0f0;
+            z-index: 1;
         }
-        /* İlk 2 sütun sabit */
-        td:nth-child(-n+2), th:nth-child(-n+2) {
-            position: sticky;
-            left: 0;
-            z-index: 3;
-        }
-        /* İlk 4 satır için üst sütunlar sabit */
-        th:nth-child(-n+2) {
-            z-index: 4;
-        }
-        /* Sayfanın yatay ve dikey kaydırma için */
-        .table-container {
-            max-height: 80vh;
-            max-width: 100vw;
-            overflow: auto;
-        }
-        #errorMessage {
-            color: red;
-            margin-top: 10px;
-            display: none;
+        .sort-button {
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px;
+            border: none;
+            border-radius: 3px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="buttons">
-            <button id="sortC4">C4'e Göre Sırala (Büyükten Küçüğe)</button>
-            <button id="sortT4">T4'e Göre Sırala (Büyükten Küçüğe)</button>
-        </div>
-        <div class="table-container">
-            <table id="dataTable">
-                <thead>
-                    <tr id="headerRow"></tr>
-                </thead>
-                <tbody id="dataBody"></tbody>
-            </table>
-        </div>
-        <div id="errorMessage"></div>
-    </div>
+    <div id="tableContainer"></div>
 
     <script>
-        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pub?output=csv";
-        let data = [];
-        let headers = [];
-
-        // Verileri çekme
-        function loadData() {
-            Papa.parse(csvUrl, {
-                download: true,
-                header: false,
-                complete: function(results) {
-                    data = results.data.filter(row => row.some(cell => cell.trim() !== ""));
-                    if (data.length <= 4) { // İlk 4 satır sabit, veriler 5. satırdan başlıyor
-                        document.getElementById("errorMessage").textContent = "Veri çekilemedi veya tablo boş.";
-                        document.getElementById("errorMessage").style.display = "block";
-                        return;
-                    }
-                    initializePage(); // Sayfayı başlat
-                },
-                error: function(error) {
-                    console.error("CSV çekme hatası:", error);
-                    document.getElementById("errorMessage").textContent = "Veri çekilirken bir hata oluştu: " + error.message;
-                    document.getElementById("errorMessage").style.display = "block";
+        // Google Sheets'ten veriyi çekme
+        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRNQRgF1h6eJ7ttqY_ETp8CPieXjjufxfRu1EkOWrgZ1zZW2x2sc8PYgbPqlH2AiUTIj2g6NRbDZVKg/pubhtml')
+            .then(response => response.text())
+            .then(html => {
+                // HTML'den tabloyu çıkarma
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const table = doc.querySelector('table');
+                
+                // Yeni tablo oluşturma ve ilk 4 satırı sabit yapma
+                const newTable = document.createElement('table');
+                const tbody = document.createElement('tbody');
+                const rows = Array.from(table.rows);
+                
+                // İlk 4 satırı sabit olarak ekleme
+                for (let i = 0; i < 4; i++) {
+                    const row = rows[i].cloneNode(true);
+                    row.classList.add('fixed-header');
+                    tbody.appendChild(row);
                 }
-            });
-        }
 
-        // Sayfayı başlat ve tabloyu yükle
-        function initializePage() {
-            headers = data[0]; // Başlıkları al
-            let headerRow = document.getElementById("headerRow");
-            headers.forEach((header, index) => {
-                let th = document.createElement("th");
-                th.textContent = header;
-                if (index < 2) th.classList.add("fixed-columns"); // İlk 2 sütun sabit
-                if (index === 0) th.classList.add("dynamic-width"); // İlk sütun geniş
-                headerRow.appendChild(th);
-            });
+                // Geri kalan satırları ekleme
+                const dataRows = rows.slice(4);
+                dataRows.forEach(row => tbody.appendChild(row.cloneNode(true)));
+                
+                newTable.appendChild(tbody);
+                document.getElementById('tableContainer').appendChild(newTable);
 
-            // İlk 4 satırı sabit olarak ekle
-            let tbody = document.getElementById("dataBody");
-            for (let i = 0; i < 4; i++) {
-                let tr = document.createElement("tr");
-                data[i].forEach((cell, index) => {
-                    let td = document.createElement("td");
-                    td.textContent = cell.trim();
-                    if (index < 2) td.classList.add("fixed-columns"); // İlk 2 sütun sabit
-                    if (index === 0) td.classList.add("dynamic-width"); // İlk sütun geniş
-                    tr.appendChild(td);
+                // C4 ve T4 hücrelerine sıralama butonları ekleme
+                const headerRow = tbody.rows[3];
+                const c4Cell = headerRow.cells[2]; // C sütunu (0'dan başlayarak 2)
+                const t4Cell = headerRow.cells[19]; // T sütunu (0'dan başlayarak 19)
+                
+                [c4Cell, t4Cell].forEach(cell => {
+                    const button = document.createElement('button');
+                    button.textContent = 'Sırala';
+                    button.className = 'sort-button';
+                    button.onclick = () => sortTable(cell.cellIndex);
+                    cell.appendChild(button);
                 });
-                tr.classList.add("fixed-header"); // İlk 4 satır sabit
-                tbody.appendChild(tr);
-            }
+            });
 
-            // Kalan verileri ekle (5. satırdan sonrası)
-            for (let i = 4; i < data.length; i++) {
-                let tr = document.createElement("tr");
-                data[i].forEach((cell, index) => {
-                    let td = document.createElement("td");
-                    td.textContent = cell.trim();
-                    if (index < 2) td.classList.add("fixed-columns"); // İlk 2 sütun sabit
-                    if (index === 0) td.classList.add("dynamic-width"); // İlk sütun geniş
-                    tr.appendChild(td);
-                });
-                tbody.appendChild(tr);
-            }
-
-            // Varsayılan olarak C4 (indeks 2, "Kayıtlı Öğretmen Sayısı") sütununa göre sırala
-            sortTable(2); // C4 sütununa göre büyükten küçüğe sıralama (indeks 2, çünkü 0 ve 1 sabit)
-
-            // Butonlara tıklama olaylarını ekle
-            document.getElementById("sortC4").addEventListener("click", () => sortTable(2)); // C4 sütunu (indeks 2)
-            document.getElementById("sortT4").addEventListener("click", () => sortTable(19)); // T4 sütunu (indeks 19, varsayım)
-        }
-
-        // Sütuna göre sıralama fonksiyonu (büyükten küçüğe)
         function sortTable(columnIndex) {
-            if (columnIndex < 2) return; // İlk 2 sütunu sıralama (sabit)
-
-            let rows = data.slice(4); // İlk 4 satır sabit, 5. satırdan sonrası sıralanacak
+            const table = document.querySelector('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.rows).slice(4); // İlk 4 satırı hariç tut
+            
             rows.sort((a, b) => {
-                let valA = a[columnIndex].trim();
-                let valB = b[columnIndex].trim();
-                let numA = parseFloat(valA.replace('%', '')); // Yüzde işaretini çıkar
-                let numB = parseFloat(valB.replace('%', ''));
-
-                if (!isNaN(numA) && !isNaN(numB)) {
-                    return numB - numA; // Sayısal sıralama (büyükten küçüğe)
-                } else {
-                    return valB.localeCompare(valA); // Metin sıralama (büyükten küçüğe)
+                const aValue = a.cells[columnIndex].textContent.trim();
+                const bValue = b.cells[columnIndex].textContent.trim();
+                
+                // Sayısal değerleri kontrol et ve karşılaştır
+                const aNum = parseFloat(aValue);
+                const bNum = parseFloat(bValue);
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return bNum - aNum; // Büyükten küçüğe
                 }
+                return bValue.localeCompare(aValue); // Metin için
             });
 
-            // Tablonun gövdesini güncelle (ilk 4 satır sabit, kalan veriler sıralı)
-            let tbody = document.getElementById("dataBody");
-            tbody.innerHTML = "";
-            for (let i = 0; i < 4; i++) {
-                let tr = document.createElement("tr");
-                data[i].forEach((cell, index) => {
-                    let td = document.createElement("td");
-                    td.textContent = cell.trim();
-                    if (index < 2) td.classList.add("fixed-columns"); // İlk 2 sütun sabit
-                    if (index === 0) td.classList.add("dynamic-width"); // İlk sütun geniş
-                    tr.appendChild(td);
-                });
-                tr.classList.add("fixed-header"); // İlk 4 satır sabit
-                tbody.appendChild(tr);
+            // Sıralanmış satırları tabloya geri ekle
+            const fixedRows = Array.from(tbody.rows).slice(0, 4);
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
             }
-            rows.forEach(row => {
-                let tr = document.createElement("tr");
-                row.forEach((cell, index) => {
-                    let td = document.createElement("td");
-                    td.textContent = cell.trim();
-                    if (index < 2) td.classList.add("fixed-columns"); // İlk 2 sütun sabit
-                    if (index === 0) td.classList.add("dynamic-width"); // İlk sütun geniş
-                    tr.appendChild(td);
-                });
-                tbody.appendChild(tr);
-            });
+            
+            // Sabit satırları ve sıralanmış satırları ekle
+            fixedRows.concat(rows).forEach(row => tbody.appendChild(row));
         }
-
-        // Sayfayı yüklerken verileri göster
-        window.onload = loadData;
     </script>
 </body>
 </html>
