@@ -115,18 +115,24 @@
         function sortTable(columnIndex, data, table) {
             // Veriyi sırala
             const sortedData = [...data].sort((a, b) => {
-                const aVal = parseFloat(a[columnIndex]) || a[columnIndex];
-                const bVal = parseFloat(b[columnIndex]) || b[columnIndex];
+                // Sayısal değerleri kontrol et
+                const aVal = a[columnIndex];
+                const bVal = b[columnIndex];
                 
-                if (typeof aVal === 'number' && typeof bVal === 'number') {
-                    return bVal - aVal; // Büyükten küçüğe sıralama
+                // Sayısal değerler için parseFloat kullan
+                const aNum = parseFloat(aVal.replace(/[^0-9.-]+/g, ''));
+                const bNum = parseFloat(bVal.replace(/[^0-9.-]+/g, ''));
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return bNum - aNum; // Büyükten küçüğe sayısal sıralama
                 }
-                return String(bVal).localeCompare(String(aVal));
+                
+                // Metin için ters sıralama
+                return bVal.localeCompare(aVal, 'tr');
             });
 
             // Tabloyu güncelle (ilk 6 satırı koruyarak - 5 sabit satır + 1 buton satırı)
             const rows = Array.from(table.querySelectorAll('tr'));
-            const fixedRows = rows.slice(0, 6); // İlk 6 satırı koru
             
             // Eski veri satırlarını kaldır
             while (table.rows.length > 6) {
