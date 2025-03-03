@@ -101,9 +101,10 @@
             }
             table.appendChild(buttonRow);
 
-            // Veri satırlarını ekle
-            renderTableData(data, table);
             container.appendChild(table);
+            
+            // Veri satırlarını en son ekle
+            renderTableData(data, table);
         }
 
         function renderTableData(data, table) {
